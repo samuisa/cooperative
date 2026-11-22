@@ -1,0 +1,18 @@
+name: Mirror to Codeberg
+
+on:
+  push:
+    branches: [ "*" ]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push su Codeberg
+        run: |
+          git remote add codeberg https://samuisa:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/samuisa/cooperative.git
+          git push codeberg HEAD:refs/heads/${{ github.ref_name }} --force
