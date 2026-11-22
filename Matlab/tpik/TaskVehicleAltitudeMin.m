@@ -1,8 +1,8 @@
 classdef TaskVehicleAltitudeMin < Task
     properties
         feedGain = 0.5;
-        altMin = 12.0;  % Limite minimo consentito
-        buffer = 2.0;    % Zona di transizione prima di raggiungere il limite
+        altMin = 12.0;
+        buffer = 2.0;
     end
     
     methods
@@ -22,9 +22,8 @@ classdef TaskVehicleAltitudeMin < Task
         
         function updateActivation(obj, robot)
             if isnan(robot.altitude)
-                obj.A = 0; % Task inattivo finché non arriva il primo pacchetto
+                obj.A = 0;
             else
-                % Attivazione fluida basata sulla funzione a campana
                 obj.A = DecreasingBellShapedFunction(...
                     obj.altMin, ...
                     obj.altMin + obj.buffer, ...

@@ -14,7 +14,7 @@ robotModel.updateTransformations();
 sim = UvmsSim(dt, robotModel, endTime);
 unity = UnityInterface("127.0.0.1");
 
-% Inizializzazione task
+% Tasks initialization
 task_position         = TaskVehiclePosition();
 task_misalignment     = TaskVehicleMisalignment();
 task_altitude_control = TaskVehicleAltitudeControl();
@@ -33,7 +33,7 @@ actionManager.addAction("landing", landing_tasks);
 actionManager.setUnifyingTaskList(unified_list);
 
 actionManager.setCurrentAction("safe_navigation");
-task_set = unified_list; 
+task_set = safe_navigation_tasks; 
 
 w_arm_goal_position = [12.2025, 37.3748, -39.8860]';
 w_arm_goal_orientation = [0, pi, pi/2];
@@ -65,8 +65,11 @@ for step = 1:sim.maxSteps
         z_w = [0; 0; 1];
 
         error = norm(cross(z_v, z_w));
-        fprintf('t = %.2f s | Azione: %s | alt = %.2f m\n', sim.time, actionManager.currentActionName, robotModel.altitude);
-        fprintf('misalignment = %.2f', error);
+        fprintf('t = %.2f s | Action: %s | alt = %.2f m\n', sim.time, actionManager.currentActionName, robotModel.altitude);
+        fprintf('Altitude = %.2f \n', robotModel.altitude);
+        fprintf('Position x = %.2f, y = %.2f, z = %.2f \n', robotModel.eta(1), robotModel.eta(2), robotModel.eta(3));
+        fprintf('Deep = %.2f \n', robotModel.eta(3));
+        fprintf('misalignment = %.2f \n\r', error);
     end
 
     SlowdownToRealtime(dt);

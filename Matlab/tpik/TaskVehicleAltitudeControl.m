@@ -1,15 +1,14 @@
 classdef TaskVehicleAltitudeControl < Task
     properties
         feedGain = 0.5;
-        targetAltitude = 0.0; % Altitudine desiderata da mantenere
+        targetAltitude = 0.0;
     end
     
     methods
         function updateReference(obj, robot)
             if isnan(robot.altitude)
-                obj.xdotbar = 0; % Previene la propagazione di NaN
+                obj.xdotbar = 0;
             else
-                % Calcola l'errore rispetto all'altitudine attuale
                 err_w = obj.targetAltitude - robot.altitude; 
                 obj.xdotbar = obj.feedGain * err_w;
             end
@@ -22,9 +21,9 @@ classdef TaskVehicleAltitudeControl < Task
         
         function updateActivation(obj, robot)
             if isnan(robot.altitude)
-                obj.A = 0; % Mantiene il task inattivo senza dati del sensore
+                obj.A = 0;
             else
-                obj.A = 1; % Sempre attivo quando i dati sono validi
+                obj.A = 1;
             end
         end
     end

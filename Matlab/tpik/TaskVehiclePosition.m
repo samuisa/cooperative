@@ -1,7 +1,7 @@
 classdef TaskVehiclePosition < Task
     properties
         feedGain = 0.5;
-        tolerance = 1e-3; % Soglia di distanza [m] sotto cui il veicolo è considerato a target
+        tolerance = 1e-3;
     end
     methods
         function updateReference(obj, robot)
@@ -19,7 +19,6 @@ classdef TaskVehiclePosition < Task
         function updateActivation(obj, robot)
             err_norm = norm(robot.vehicleGoalPosition - robot.eta(1:3));
             
-            % Attivazione 0 se distanza <= 0.001 m, 1 se distanza >= 0.05 m
             a = IncreasingBellShapedFunction(1e-3, 0.05, 0, 1, err_norm);
             
             obj.A = a * eye(3);
