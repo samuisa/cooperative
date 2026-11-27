@@ -6,7 +6,7 @@ classdef TaskMinAltitude < Task
         armID = ""             % "left" or "right"; selects the Jacobian columns in the 14-DOF vector.
         feedGain = 0.5         % Proportional gain [1/s].
         altMin = 0.15          % Minimum allowed altitude [m].
-        altThreshold = 0.18    % Altitude below which smooth activation begins [m].
+        altThreshold = 0.16    % Altitude below which smooth activation begins [m].
     end
 
     methods
@@ -16,7 +16,7 @@ classdef TaskMinAltitude < Task
         end
 
         function updateReference(obj)
-            currentAlt = obj.robot.wTt(3, 4);
+            currentAlt = obj.robot.wTe(3, 4);
             obj.xdotbar = obj.feedGain * (obj.altMin - currentAlt);
         end
 
@@ -30,7 +30,7 @@ classdef TaskMinAltitude < Task
         end
 
         function updateActivation(obj)
-            currentAlt = obj.robot.wTt(3, 4);
+            currentAlt = obj.robot.wTe(3, 4);
             % Smooth activation in [altMin, altThreshold]: 1 below altMin, 0 above altThreshold.
             obj.A = DecreasingBellShapedFunction(obj.altMin, obj.altThreshold, 0, 1, currentAlt);
         end

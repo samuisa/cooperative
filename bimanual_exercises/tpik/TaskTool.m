@@ -47,7 +47,7 @@ classdef TaskTool < Task
 
         function updateJacobian(obj)
             %UPDATEJACOBIAN Embed the selected arm Jacobian in the fourteen-dimensional control space.
-            %
+            %4
             % Output:
             %   None. Updates obj.J with columns ordered as [left arm; right arm].
             if obj.armID == "left"

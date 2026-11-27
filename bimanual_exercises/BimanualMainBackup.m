@@ -1,3 +1,4 @@
+
 function BimanualMain()
 %BIMANUALMAIN Assemble and run the two-Panda task-priority simulation.
 %
@@ -49,7 +50,7 @@ leftArm.setGoal(objectPosition, objectOrientation, toolGoalPositionLeftArm, tool
 rightArm.setGoal(objectPosition, objectOrientation, toolGoalPositionRightArm, toolGoalOrientationRightArm);
 
 % The cooperative-motion object goal is stored now for tasks introduced in the following exercise phases.
-wTog = [RPYToRotationMatrix(0, 0, 0) [0.65; -0.35; 0.28]; 0 0 0 1];
+wTog = [RPYToRotationMatrix(0, 0, 0) [0.65; -0.35; 0.15]; 0 0 0 1];
 leftArm.setObjectGoal(wTog);
 rightArm.setObjectGoal(wTog);
 
@@ -57,24 +58,34 @@ rightArm.setObjectGoal(wTog);
 
 minimumManipulability = 0.06;
 manipulabilityActivationThreshold = 0.07;
+
+% phase 1, reach and grasp object
 leftManipulabilityTask      = TaskManipulability(leftArm, "left", "left manipulability", minimumManipulability, manipulabilityActivationThreshold);
 rightManipulabilityTask     = TaskManipulability(rightArm, "right", "right manipulability", minimumManipulability, manipulabilityActivationThreshold);
 leftToolTask                = TaskTool(leftArm, "left", "left tool");
 rightToolTask               = TaskTool(rightArm, "right", "right tool");
+
 goToObjectTasks             = {leftManipulabilityTask, rightManipulabilityTask, leftToolTask, rightToolTask};
 
 % phase 2, move object after grasping
 minAltLeft                  = TaskMinAltitude(leftArm, "left");
 minAltRight                 = TaskMinAltitude(rightArm, "right");
+
 rigidConstraintTask         = TaskRigidConstraint(leftArm, rightArm, "rigid constraint");
-objectTask                  = TaskObject(leftArm, "move object");
+% leftObjectTask                  = TaskObject(leftArm, "move object");
+% rightObjectTask                  = TaskObject(rightArm, "move object");
+
 jointLimitsLeft             = TaskJointLimits(leftArm, "left");
 jointLimitsRight            = TaskJointLimits(rightArm, "right");
-moveObjectTasks             = {jointLimitsLeft, jointLimitsRight, minAltLeft, minAltRight, rigidConstraintTask, objectTask};
 
-stopTask = TaskStop("stop motion");
-stopTasks = {minAltLeft, minAltRight, stopTask};
+%moveObjectTasks            = {jointLimitsLeft, jointLimitsRight, minAltLeft, minAltRight, rigidConstraintTask, objectTask};
+moveObjectTasks             = {jointLimitsLeft, jointLimitsRight, minAltLeft, minAltRight, rigidConstraintTask, leftToolTask, rightToolTask};
 
+% phase 3, stop
+stopTask                    = TaskStop("stop motion");
+stopTasks                   = {minAltLeft, minAltRight, stopTask};
+
+% register actions
 actionManager = ActionManager(bimanualSystem);
 actionManager.addAction("go to object", goToObjectTasks);
 actionManager.addAction("move object", moveObjectTasks);
@@ -110,20 +121,34 @@ for step = 1:bimanualSystem.maxSteps
 
         if leftReached && rightReached
             rigidConstraintTask.computeGraspTransforms();
-            objectTask.computeGraspTransform();
+
+            tTo_left  = leftArm.wTt \ leftArm.wTo;
+            tTo_right = rightArm.wTt \ rightArm.wTo;
+
+            wTg_left_move  = wTog / tTo_left;
+            wTg_right_move = wTog / tTo_right;
+
+            leftArm.setGoal(wTog(1:3, 4), wTog(1:3, 1:3), wTg_left_move(1:3, 4), wTg_left_move(1:3, 1:3));
+            rightArm.setGoal(wTog(1:3, 4), wTog(1:3, 1:3), wTg_right_move(1:3, 4), wTg_right_move(1:3, 1:3));
+
+            % Libera l'orientamento durante il trasporto
+            leftToolTask.positionOnly = true;
+            rightToolTask.positionOnly = true;
+
             actionManager.setCurrentAction("move object");
             phase = 2;
+            
         end
 
     elseif phase == 2
-        wTo_current = leftArm.wTt * objectTask.tTo;
+        wTo_current = leftArm.wTt * tTo_left;
         [objOriErr, objPosErr] = CartesianError(leftArm.wTog, wTo_current);
 
-        % if mod(step, round(1/dt)) == 0
-        %     fprintf('posErr: %.4f m | oriErr: %.4f rad\n', norm(objPosErr), norm(objOriErr));
-        % end
+        if mod(step, round(1/dt)) == 0
+            fprintf('object position: x %.2f, y %.2f, z %.2f\n', wTo_current(1, 4), wTo_current(2, 4), wTo_current(3, 4));
+        end
 
-        if norm(objPosErr) < posTol && norm(objOriErr) < oriTol
+        if norm(objPosErr) < posTol
             actionManager.setCurrentAction("stop");
             phase = 3;
         end
@@ -138,13 +163,17 @@ for step = 1:bimanualSystem.maxSteps
 
     if mod(step, round(1/dt)) == 0
         fprintf('t = %.2f s | phase: %d\n', bimanualSystem.time, phase);
-        if phase == 2
-            fprintf('posErr: %.4f | oriErr: %.4f | A_jlL: %.2f | A_jlR: %.2f | A_altL: %.2f | A_altR: %.2f\n', ...
-                norm(objPosErr), norm(objOriErr), norm(jointLimitsLeft.A), norm(jointLimitsRight.A), minAltLeft.A, minAltRight.A);
-        end
+        % fprintf('left tool orientation: (%.2f, %.2f, %.2f) \n', leftarm.wTt())
+        % disp(leftArm.wTt(1:3,1:3));
+        % disp(rightArm.wTt(1:3,1:3));
     end
     SlowdownToRealtime(dt);
 end
+
+disp([minAltLeft.A, minAltRight.A]);                 % sarà [0, 0]
+disp(find(diag(jointLimitsLeft.A) > 0)');            % giunti sinistri nel buffer 0.05 rad
+disp(find(diag(jointLimitsRight.A) > 0)');           % giunti destri nel buffer 0.05 rad
+disp([leftArm.computeManipulability(1e-6,1e-4,1e-4), rightArm.computeManipulability(1e-6,1e-4,1e-4)]);
 
 %% Review results and release communication resources
 logger.plotAll();

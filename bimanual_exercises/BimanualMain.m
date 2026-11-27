@@ -71,11 +71,11 @@ minAltLeft                  = TaskMinAltitude(leftArm, "left");
 minAltRight                 = TaskMinAltitude(rightArm, "right");
 
 rigidConstraintTask         = TaskRigidConstraint(leftArm, rightArm, "rigid constraint");
-objectTask                  = TaskObject(leftArm, "move object");
+
 jointLimitsLeft             = TaskJointLimits(leftArm, "left");
 jointLimitsRight            = TaskJointLimits(rightArm, "right");
 
-moveObjectTasks             = {jointLimitsLeft, jointLimitsRight, minAltLeft, minAltRight, rigidConstraintTask, objectTask};
+moveObjectTasks             = {jointLimitsLeft, jointLimitsRight, leftManipulabilityTask, rightManipulabilityTask, minAltLeft, minAltRight, rigidConstraintTask, leftToolTask, rightToolTask};
 
 % phase 3, stop
 stopTask                    = TaskStop("stop motion");
@@ -117,18 +117,30 @@ for step = 1:bimanualSystem.maxSteps
 
         if leftReached && rightReached
             rigidConstraintTask.computeGraspTransforms();
-            objectTask.computeGraspTransform();
+
+            % Trasformazioni costanti tool -> oggetto al momento della presa
+            tTo_left  = leftArm.wTt \ leftArm.wTo;
+            tTo_right = rightArm.wTt \ rightArm.wTo;
+
+            % Nuovi goal dei due tool corrispondenti a wTog (wTg = wTog * inv(tTo))
+            wTg_left_move  = wTog / tTo_left;
+            wTg_right_move = wTog / tTo_right;
+
+            % Aggiorna wTg su entrambi i bracci per TaskTool
+            leftArm.setGoal(wTog(1:3, 4), wTog(1:3, 1:3), wTg_left_move(1:3, 4), wTg_left_move(1:3, 1:3));
+            rightArm.setGoal(wTog(1:3, 4), wTog(1:3, 1:3), wTg_right_move(1:3, 4), wTg_right_move(1:3, 1:3));
+
             actionManager.setCurrentAction("move object");
             phase = 2;
         end
 
     elseif phase == 2
-        wTo_current = leftArm.wTt * objectTask.tTo;
+        wTo_current = leftArm.wTt * tTo_left;
         [objOriErr, objPosErr] = CartesianError(leftArm.wTog, wTo_current);
 
-        % if mod(step, round(1/dt)) == 0
-        %     fprintf('posErr: %.4f m | oriErr: %.4f rad\n', norm(objPosErr), norm(objOriErr));
-        % end
+        if mod(step, round(1/dt)) == 0
+            fprintf('object position: x %.2f, y %.2f, z %.2f\n', wTo_current(1, 4), wTo_current(2, 4), wTo_current(3, 4));
+        end
 
         if norm(objPosErr) < posTol && norm(objOriErr) < oriTol
             actionManager.setCurrentAction("stop");
@@ -145,6 +157,9 @@ for step = 1:bimanualSystem.maxSteps
 
     if mod(step, round(1/dt)) == 0
         fprintf('t = %.2f s | phase: %d\n', bimanualSystem.time, phase);
+        % fprintf('left tool orientation: (%.2f, %.2f, %.2f) \n', leftarm.wTt())
+        % disp(leftArm.wTt(1:3,1:3));
+        % disp(rightArm.wTt(1:3,1:3));
     end
     SlowdownToRealtime(dt);
 end
