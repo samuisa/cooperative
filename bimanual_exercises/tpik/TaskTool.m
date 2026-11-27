@@ -7,8 +7,8 @@ classdef TaskTool < Task
         robot                     % PandaArm whose tool pose and Jacobian define this task.
         armID = ""                % "left" or "right"; selects the Jacobian columns in the bimanual control vector.
         feedbackGain = 1           % Proportional gain converting Cartesian error into a velocity reference [1/s].
-        maxAngularVelocity = 0.3   % Maximum absolute angular-velocity component [rad/s].
-        maxLinearVelocity = 0.3    % Maximum absolute linear-velocity component [m/s].
+        maxAngularVelocity = 0.5  % Maximum absolute angular-velocity component [rad/s].
+        maxLinearVelocity = 0.5    % Maximum absolute linear-velocity component [m/s].
     end
 
     methods

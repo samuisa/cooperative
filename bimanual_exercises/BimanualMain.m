@@ -49,7 +49,7 @@ leftArm.setGoal(objectPosition, objectOrientation, toolGoalPositionLeftArm, tool
 rightArm.setGoal(objectPosition, objectOrientation, toolGoalPositionRightArm, toolGoalOrientationRightArm);
 
 % The cooperative-motion object goal is stored now for tasks introduced in the following exercise phases.
-wTog = [RPYToRotationMatrix(0, 0, 0) [0.65; -0.35; 0.28]; 0 0 0 1];
+wTog = [RPYToRotationMatrix(0, 0, 0) [0.65; -0.35; 0.0]; 0 0 0 1];
 leftArm.setObjectGoal(wTog);
 rightArm.setObjectGoal(wTog);
 
@@ -75,7 +75,7 @@ rigidConstraintTask         = TaskRigidConstraint(leftArm, rightArm, "rigid cons
 jointLimitsLeft             = TaskJointLimits(leftArm, "left");
 jointLimitsRight            = TaskJointLimits(rightArm, "right");
 
-moveObjectTasks             = {jointLimitsLeft, jointLimitsRight, leftManipulabilityTask, rightManipulabilityTask, minAltLeft, minAltRight, rigidConstraintTask, leftToolTask, rightToolTask};
+moveObjectTasks             = {jointLimitsLeft, jointLimitsRight, minAltLeft, minAltRight, rigidConstraintTask, leftToolTask, rightToolTask};
 
 % phase 3, stop
 stopTask                    = TaskStop("stop motion");
